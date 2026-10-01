@@ -69,6 +69,10 @@ const messages: Record<Locale, Record<string, string>> = {
     "wishlist.placeholderLink": "https://...",
     "wishlist.error": "Voeg zowel een naam als een link toe.",
     "wishlist.addButton": "+ Toevoegen aan verlanglijstje",
+    "wishlist.fieldImage": "Foto (optioneel)",
+    "wishlist.imageError":
+      "Kon deze afbeelding niet verwerken. Probeer een andere foto.",
+    "wishlist.viewLarger": "Klik om te vergroten",
 
     "footer.tagline":
       "Gemaakt met 🎄 & 🍪 voor jouw favoriete cadeau-uitwisseling.",
@@ -144,6 +148,10 @@ const messages: Record<Locale, Record<string, string>> = {
     "wishlist.placeholderLink": "https://...",
     "wishlist.error": "Add both a title and a link.",
     "wishlist.addButton": "+ Add to wishlist",
+    "wishlist.fieldImage": "Photo (optional)",
+    "wishlist.imageError":
+      "Couldn't process that image. Try a different photo.",
+    "wishlist.viewLarger": "Click to view larger",
 
     "footer.tagline": "Made with 🎄 & 🍪 for your favorite gift exchange.",
 

@@ -20,6 +20,7 @@ const showEditModal = ref(false)
 const showWishlistModal = ref(false)
 const revealRecipient = ref(false)
 const drawError = ref('')
+const lightboxImage = ref<string | null>(null)
 
 function chooseGuest(guestId: string) {
   store.setActiveGuest(sessionId.value, guestId)
@@ -97,7 +98,16 @@ useHead(() => ({
             <h3>{{ t('session.wishlistOf', { name: recipient.name }) }}</h3>
             <ul v-if="recipient.wishlist.length" class="wishlist-items">
               <li v-for="item in recipient.wishlist" :key="item.id" class="wishlist-item">
-                <a :href="item.link" target="_blank" rel="noopener noreferrer">{{ item.title }} ↗</a>
+                <button
+                  v-if="item.imageUrl"
+                  type="button"
+                  class="wishlist-item-thumb"
+                  :title="t('wishlist.viewLarger')"
+                  @click="lightboxImage = item.imageUrl!"
+                >
+                  <img :src="item.imageUrl" alt="" />
+                </button>
+                <a :href="item.link" target="_blank" rel="noopener noreferrer" class="wishlist-item-link">{{ item.title }} ↗</a>
               </li>
             </ul>
             <p v-else class="empty-state">{{ t('session.noWishlist') }}</p>
@@ -112,6 +122,8 @@ useHead(() => ({
 
     <WishlistModal v-if="showWishlistModal && activeGuest" :session-id="sessionId" :guest="activeGuest"
       @close="showWishlistModal = false" />
+
+    <ImageLightbox v-if="lightboxImage" :src="lightboxImage" @close="lightboxImage = null" />
   </section>
 
   <section v-else class="page">

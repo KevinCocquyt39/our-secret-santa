@@ -9,7 +9,22 @@ const { t } = useI18n()
 
 const title = ref('')
 const link = ref('')
+const imageDataUrl = ref<string | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const error = ref('')
+const lightboxImage = ref<string | null>(null)
+
+async function onImageChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  try {
+    imageDataUrl.value = await resizeImageToDataUrl(file)
+  } catch {
+    error.value = t('wishlist.imageError')
+    imageDataUrl.value = null
+  }
+}
 
 async function addItem() {
   const trimmedTitle = title.value.trim()
@@ -20,9 +35,11 @@ async function addItem() {
     return
   }
 
-  await store.addWishlistItem(props.sessionId, props.guest.id, trimmedTitle, trimmedLink)
+  await store.addWishlistItem(props.sessionId, props.guest.id, trimmedTitle, trimmedLink, imageDataUrl.value ?? undefined)
   title.value = ''
   link.value = ''
+  imageDataUrl.value = null
+  if (fileInput.value) fileInput.value.value = ''
   error.value = ''
 }
 
@@ -39,7 +56,16 @@ async function removeItem(itemId: string) {
 
       <ul v-if="guest.wishlist.length" class="wishlist-items wishlist-items--editable">
         <li v-for="item in guest.wishlist" :key="item.id" class="wishlist-item">
-          <a :href="item.link" target="_blank" rel="noopener noreferrer">{{ item.title }} ↗</a>
+          <button
+            v-if="item.imageUrl"
+            type="button"
+            class="wishlist-item-thumb"
+            :title="t('wishlist.viewLarger')"
+            @click="lightboxImage = item.imageUrl!"
+          >
+            <img :src="item.imageUrl" alt="" />
+          </button>
+          <a :href="item.link" target="_blank" rel="noopener noreferrer" class="wishlist-item-link">{{ item.title }} ↗</a>
           <button class="icon-btn" :title="t('common.remove')" @click="removeItem(item.id)">✕</button>
         </li>
       </ul>
@@ -54,6 +80,11 @@ async function removeItem(itemId: string) {
           <span class="field-label">{{ t('wishlist.fieldLink') }}</span>
           <input v-model="link" type="url" class="input" :placeholder="t('wishlist.placeholderLink')" />
         </label>
+        <label class="field">
+          <span class="field-label">{{ t('wishlist.fieldImage') }}</span>
+          <input ref="fileInput" type="file" accept="image/*" class="file-input" @change="onImageChange" />
+          <img v-if="imageDataUrl" :src="imageDataUrl" class="image-preview" alt="" />
+        </label>
         <p v-if="error" class="form-error">{{ error }}</p>
         <button type="submit" class="btn btn-primary">{{ t('wishlist.addButton') }}</button>
       </form>
@@ -63,4 +94,6 @@ async function removeItem(itemId: string) {
       </div>
     </div>
   </div>
+
+  <ImageLightbox v-if="lightboxImage" :src="lightboxImage" @close="lightboxImage = null" />
 </template>

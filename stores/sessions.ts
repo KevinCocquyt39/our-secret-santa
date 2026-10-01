@@ -165,21 +165,22 @@ export const useSessionsStore = defineStore("sessions", () => {
     guestId: string,
     title: string,
     link: string,
+    imageUrl?: string,
   ) {
     const session = findSession(sessionId);
     const guest = session?.guests.find((g) => g.id === guestId);
     if (!session || !guest) return;
 
+    const item: Guest["wishlist"][number] = {
+      id: createId(),
+      title: title.trim(),
+      link: link.trim(),
+    };
+    // Firestore rejects `undefined` field values, so only attach imageUrl when present.
+    if (imageUrl) item.imageUrl = imageUrl;
+
     const nextGuests = session.guests.map((g) =>
-      g.id === guestId
-        ? {
-            ...g,
-            wishlist: [
-              ...g.wishlist,
-              { id: createId(), title: title.trim(), link: link.trim() },
-            ],
-          }
-        : g,
+      g.id === guestId ? { ...g, wishlist: [...g.wishlist, item] } : g,
     );
 
     await updateDoc(doc(getDb(), "sessions", sessionId), {

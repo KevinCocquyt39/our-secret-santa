@@ -2,6 +2,8 @@ export interface WishlistItem {
   id: string;
   title: string;
   link: string;
+  /** Resized/compressed image, stored inline as a data URL. */
+  imageUrl?: string;
 }
 
 export interface Guest {
