@@ -30,6 +30,10 @@ Then open http://localhost:3000.
 
 > ⚠️ The included `firestore.rules` are intentionally open (no auth exists yet in the app), so anyone with Firestore access can read/write any session. Fine for a private friends-and-family link; don't use it for anything more sensitive without adding auth first.
 
-## Roadmap
+## Phase 3 (current): CI/CD to GitHub Pages
 
-- **Phase 3** — CI/CD pipeline (GitHub Actions) that builds and deploys the app to GitHub Pages / Appwrite Sites on every push to `main`.
+Every push to `main` builds a static export (`nuxt generate`) and deploys it to GitHub Pages via [`.github/workflows/deploy-gh-pages.yml`](.github/workflows/deploy-gh-pages.yml).
+
+- Live site: https://kevincocquyt39.github.io/our-secret-santa/
+- The Firebase web config is injected at build time from repo secrets (`NUXT_PUBLIC_FIREBASE_*`) — update them in GitHub repo Settings → Secrets and variables → Actions if the Firebase project ever changes.
+- Since this is a client-only SPA with dynamic routes (`/sessions/:id`), the build copies `index.html` to `404.html` so GitHub Pages falls back to the app shell for deep links, and the Vue Router takes over from there.
