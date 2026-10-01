@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const { t } = useI18n()
+</script>
+
 <template>
   <div class="app-shell">
     <SnowOverlay />
@@ -6,7 +10,7 @@
       <NuxtPage />
     </main>
     <footer class="app-footer">
-      <p>Made with 🎄 &amp; 🍪 for your favorite gift exchange.</p>
+      <p>{{ t('footer.tagline') }}</p>
     </footer>
   </div>
 </template>

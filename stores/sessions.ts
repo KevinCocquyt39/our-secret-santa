@@ -127,7 +127,8 @@ export const useSessionsStore = defineStore("sessions", () => {
       // Runs as a transaction so two guests drawing at once can't get the same recipient.
       const recipientId = await runTransaction(getDb(), async (tx) => {
         const snap = await tx.get(ref);
-        if (!snap.exists()) throw new Error("Session not found.");
+        if (!snap.exists())
+          throw new Error(useI18n().t("store.sessionNotFound"));
         const session = snap.data() as SecretSantaSession;
 
         if (session.draws[guestId]) {
@@ -140,9 +141,7 @@ export const useSessionsStore = defineStore("sessions", () => {
         );
 
         if (candidates.length === 0) {
-          throw new Error(
-            "No more guests left to draw. Ask the organizer to reset the session.",
-          );
+          throw new Error(useI18n().t("store.noCandidates"));
         }
 
         const picked =
@@ -156,7 +155,7 @@ export const useSessionsStore = defineStore("sessions", () => {
       return {
         ok: false,
         message:
-          err instanceof Error ? err.message : "Could not draw a recipient.",
+          err instanceof Error ? err.message : useI18n().t("store.drawFailed"),
       };
     }
   }

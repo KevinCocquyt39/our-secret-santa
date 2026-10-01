@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const store = useSessionsStore()
+const { t, locale } = useI18n()
 
 const newSessionName = ref('')
 const guestNameInputs = ref<string[]>(['', ''])
@@ -23,11 +24,11 @@ async function createSession() {
   const guests = guestNameInputs.value.map((n) => n.trim()).filter(Boolean)
 
   if (!name) {
-    formError.value = 'Give your gift exchange a name.'
+    formError.value = t('index.errorName')
     return
   }
   if (guests.length < 2) {
-    formError.value = 'Add at least two guests to draw names.'
+    formError.value = t('index.errorGuests')
     return
   }
 
@@ -39,7 +40,7 @@ async function createSession() {
 }
 
 async function confirmDelete(id: string, name: string) {
-  if (confirm(`Delete "${name}"? This cannot be undone.`)) {
+  if (confirm(t('index.confirmDelete', { name }))) {
     await store.deleteSession(id)
   }
 }
@@ -51,50 +52,52 @@ async function confirmDelete(id: string, name: string) {
 
     <div class="page-grid">
       <div class="card create-card">
-        <h2 class="card-title">🎁 Start a new exchange</h2>
-        <p class="card-subtitle">Name your exchange and list everyone who's joining.</p>
+        <h2 class="card-title">{{ t('index.createTitle') }}</h2>
+        <p class="card-subtitle">{{ t('index.createSubtitle') }}</p>
 
         <form class="form" @submit.prevent="createSession">
           <label class="field">
-            <span class="field-label">Exchange name</span>
-            <input v-model="newSessionName" type="text" class="input" placeholder="e.g. Family Christmas 2026" />
+            <span class="field-label">{{ t('index.fieldExchangeName') }}</span>
+            <input v-model="newSessionName" type="text" class="input"
+              :placeholder="t('index.placeholderExchangeName')" />
           </label>
 
           <div class="field">
-            <span class="field-label">Guests</span>
+            <span class="field-label">{{ t('index.fieldGuests') }}</span>
             <div v-for="(_, i) in guestNameInputs" :key="i" class="guest-input-row">
-              <input v-model="guestNameInputs[i]" type="text" class="input" :placeholder="`Guest ${i + 1} name`" />
-              <button
-                v-if="guestNameInputs.length > 2"
-                type="button"
-                class="icon-btn"
-                title="Remove"
-                @click="removeGuestInput(i)"
-              >
+              <input v-model="guestNameInputs[i]" type="text" class="input"
+                :placeholder="t('index.placeholderGuestName', { n: i + 1 })" />
+              <button v-if="guestNameInputs.length > 2" type="button" class="icon-btn" :title="t('common.remove')"
+                @click="removeGuestInput(i)">
                 ✕
               </button>
             </div>
-            <button type="button" class="btn btn-ghost" @click="addGuestInput">+ Add another guest</button>
+            <button type="button" class="btn btn-ghost" @click="addGuestInput">{{ t('index.addGuest') }}</button>
           </div>
 
           <p v-if="formError" class="form-error">{{ formError }}</p>
 
-          <button type="submit" class="btn btn-primary">Create session 🎄</button>
+          <button type="submit" class="btn btn-primary">{{ t('index.createButton') }}</button>
         </form>
       </div>
 
       <div class="sessions-list">
-        <h2 class="card-title">🔔 Your sessions</h2>
-        <p v-if="!sessions.length" class="empty-state">No sessions yet — create your first one to get started!</p>
+        <h2 class="card-title">{{ t('index.sessionsTitle') }}</h2>
+        <p v-if="!sessions.length" class="empty-state">{{ t('index.noSessions') }}</p>
 
         <ul v-else class="session-cards">
           <li v-for="session in sessions" :key="session.id" class="session-card">
             <NuxtLink :to="`/sessions/${session.id}`" class="session-card-link">
               <h3>{{ session.name }}</h3>
-              <p>{{ session.guests.length }} guests</p>
-              <p class="session-card-date">Created {{ new Date(session.createdAt).toLocaleDateString() }}</p>
+              <p>{{ t('common.guestsCount', { n: session.guests.length }) }}</p>
+              <p class="session-card-date">
+                {{ t('common.createdOn', { date: new Date(session.createdAt).toLocaleDateString(locale) }) }}
+              </p>
             </NuxtLink>
-            <button class="icon-btn" title="Delete session" @click="confirmDelete(session.id, session.name)">🗑</button>
+            <button class="icon-btn" :title="t('common.deleteSession')"
+              @click="confirmDelete(session.id, session.name)">
+              🗑
+            </button>
           </li>
         </ul>
       </div>

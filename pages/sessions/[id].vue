@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const store = useSessionsStore()
+const { t } = useI18n()
 
 const sessionId = computed(() => route.params.id as string)
 const session = computed(() => store.findSession(sessionId.value))
@@ -43,7 +44,7 @@ function toggleReveal() {
 }
 
 useHead(() => ({
-  title: session.value ? `${session.value.name} — Our Secret Santa` : 'Session not found'
+  title: session.value ? `${session.value.name} — Our Secret Santa` : t('session.notFoundTitle')
 }))
 </script>
 
@@ -54,15 +55,15 @@ useHead(() => ({
     <div class="session-header">
       <div>
         <h1 class="session-title">{{ session.name }}</h1>
-        <p class="session-meta">{{ session.guests.length }} guests</p>
+        <p class="session-meta">{{ t('common.guestsCount', { n: session.guests.length }) }}</p>
       </div>
-      <button class="btn btn-ghost" @click="showEditModal = true">✏️ Edit guests &amp; name</button>
+      <button class="btn btn-ghost" @click="showEditModal = true">{{ t('session.editGuests') }}</button>
     </div>
 
     <!-- Step 2: who are you -->
     <div v-if="!activeGuest" class="card">
-      <h2 class="card-title">🙋 Which one are you?</h2>
-      <p class="card-subtitle">Pick your name to continue to the gift exchange.</p>
+      <h2 class="card-title">{{ t('session.whoAreYouTitle') }}</h2>
+      <p class="card-subtitle">{{ t('session.whoAreYouSubtitle') }}</p>
       <div class="guest-picker-grid">
         <button v-for="guest in session.guests" :key="guest.id" class="guest-pick-btn" @click="chooseGuest(guest.id)">
           {{ guest.name }}
@@ -73,55 +74,51 @@ useHead(() => ({
     <!-- Step 3: draw & wishlist -->
     <div v-else class="step-three">
       <div class="active-guest-bar">
-        <p>You're signed in as <strong>{{ activeGuest.name }}</strong></p>
-        <button class="btn btn-link" @click="switchGuest">Not you? Switch</button>
+        <p>{{ t('session.signedInAs', { name: activeGuest.name }) }}</p>
+        <button class="btn btn-link" @click="switchGuest">{{ t('session.switchGuest') }}</button>
       </div>
 
       <div class="card draw-card">
-        <h2 class="card-title">🎁 Your Secret Santa draw</h2>
+        <h2 class="card-title">{{ t('session.drawTitle') }}</h2>
 
         <div v-if="!recipient" class="draw-empty">
-          <p>Ready to find out who you're buying for?</p>
-          <button class="btn btn-primary" @click="draw">🎲 Draw my Secret Santa</button>
+          <p>{{ t('session.drawPrompt') }}</p>
+          <button class="btn btn-primary" @click="draw">{{ t('session.drawButton') }}</button>
           <p v-if="drawError" class="form-error">{{ drawError }}</p>
         </div>
 
         <div v-else class="draw-result">
           <button class="recipient-reveal-btn" @click="toggleReveal">
-            <span v-if="!revealRecipient">🎁 Click to reveal who you're buying for</span>
-            <span v-else>You're buying for <strong>{{ recipient.name }}</strong> 🎉</span>
+            <span v-if="!revealRecipient">{{ t('session.revealPrompt') }}</span>
+            <span v-else>{{ t('session.buyingFor', { name: recipient.name }) }}</span>
           </button>
 
           <div v-if="revealRecipient" class="wishlist-viewer">
-            <h3>{{ recipient.name }}'s wishlist</h3>
+            <h3>{{ t('session.wishlistOf', { name: recipient.name }) }}</h3>
             <ul v-if="recipient.wishlist.length" class="wishlist-items">
               <li v-for="item in recipient.wishlist" :key="item.id" class="wishlist-item">
                 <a :href="item.link" target="_blank" rel="noopener noreferrer">{{ item.title }} ↗</a>
               </li>
             </ul>
-            <p v-else class="empty-state">No wishlist yet — surprise them with something cozy!</p>
+            <p v-else class="empty-state">{{ t('session.noWishlist') }}</p>
           </div>
         </div>
       </div>
 
-      <button class="btn btn-secondary" @click="showWishlistModal = true">🎀 Manage my wishlist</button>
+      <button class="btn btn-secondary" @click="showWishlistModal = true">{{ t('session.manageWishlist') }}</button>
     </div>
 
     <EditSessionModal v-if="showEditModal" :session="session" @close="showEditModal = false" />
 
-    <WishlistModal
-      v-if="showWishlistModal && activeGuest"
-      :session-id="sessionId"
-      :guest="activeGuest"
-      @close="showWishlistModal = false"
-    />
+    <WishlistModal v-if="showWishlistModal && activeGuest" :session-id="sessionId" :guest="activeGuest"
+      @close="showWishlistModal = false" />
   </section>
 
   <section v-else class="page">
     <div class="card">
-      <h2 class="card-title">Session not found</h2>
-      <p class="card-subtitle">This gift exchange doesn't exist (anymore).</p>
-      <NuxtLink to="/" class="btn btn-primary">Back to sessions</NuxtLink>
+      <h2 class="card-title">{{ t('session.notFoundTitle') }}</h2>
+      <p class="card-subtitle">{{ t('session.notFoundSubtitle') }}</p>
+      <NuxtLink to="/" class="btn btn-primary">{{ t('session.backToSessions') }}</NuxtLink>
     </div>
   </section>
 </template>
