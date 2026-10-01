@@ -10,7 +10,7 @@ const title = ref('')
 const link = ref('')
 const error = ref('')
 
-function addItem() {
+async function addItem() {
   const trimmedTitle = title.value.trim()
   const trimmedLink = link.value.trim()
 
@@ -19,14 +19,14 @@ function addItem() {
     return
   }
 
-  store.addWishlistItem(props.sessionId, props.guest.id, trimmedTitle, trimmedLink)
+  await store.addWishlistItem(props.sessionId, props.guest.id, trimmedTitle, trimmedLink)
   title.value = ''
   link.value = ''
   error.value = ''
 }
 
-function removeItem(itemId: string) {
-  store.removeWishlistItem(props.sessionId, props.guest.id, itemId)
+async function removeItem(itemId: string) {
+  await store.removeWishlistItem(props.sessionId, props.guest.id, itemId)
 }
 </script>
 

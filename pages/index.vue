@@ -18,7 +18,7 @@ function removeGuestInput(index: number) {
   guestNameInputs.value.splice(index, 1)
 }
 
-function createSession() {
+async function createSession() {
   const name = newSessionName.value.trim()
   const guests = guestNameInputs.value.map((n) => n.trim()).filter(Boolean)
 
@@ -32,15 +32,15 @@ function createSession() {
   }
 
   formError.value = ''
-  const id = store.createSession(name, guests)
+  const id = await store.createSession(name, guests)
   newSessionName.value = ''
   guestNameInputs.value = ['', '']
   navigateTo(`/sessions/${id}`)
 }
 
-function confirmDelete(id: string, name: string) {
+async function confirmDelete(id: string, name: string) {
   if (confirm(`Delete "${name}"? This cannot be undone.`)) {
-    store.deleteSession(id)
+    await store.deleteSession(id)
   }
 }
 </script>

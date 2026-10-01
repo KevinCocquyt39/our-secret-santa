@@ -10,7 +10,16 @@ export default defineNuxtConfig({
   modules: ["@pinia/nuxt", "@vueuse/nuxt"],
 
   css: ["~/assets/css/main.css"],
-
+  runtimeConfig: {
+    public: {
+      firebaseApiKey: "",
+      firebaseAuthDomain: "",
+      firebaseProjectId: "",
+      firebaseStorageBucket: "",
+      firebaseMessagingSenderId: "",
+      firebaseAppId: "",
+    },
+  },
   app: {
     head: {
       title: "Our Secret Santa 🎄",

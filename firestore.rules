@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// No login flow exists yet (guests just pick their name), so this app has
+// no way to scope access per-user. Rules are intentionally open so the app
+// works; treat session links as semi-private (shared only with your group).
+// Tighten this (e.g. anonymous auth + per-session membership) before using
+// it for anything you wouldn't want a stranger with the link to edit.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sessions/{sessionId} {
+      allow read, write: if true;
+    }
+  }
+}

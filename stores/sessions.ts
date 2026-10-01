@@ -1,18 +1,54 @@
 import { defineStore } from "pinia";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  runTransaction,
+  setDoc,
+  updateDoc,
+  type Firestore,
+} from "firebase/firestore";
 import type { SecretSantaSession, Guest } from "~/types";
 
 export const useSessionsStore = defineStore("sessions", () => {
-  const sessions = useLocalStorage<SecretSantaSession[]>("oss-sessions", []);
+  const sessions = ref<SecretSantaSession[]>([]);
+  // Who you are in each session is a per-browser preference, not shared data.
   const activeGuestBySession = useLocalStorage<Record<string, string>>(
     "oss-active-guest",
     {},
   );
 
+  let db: Firestore | null = null;
+  let unsubscribe: (() => void) | null = null;
+
+  function getDb(): Firestore {
+    if (!db) {
+      const { $firestore } = useNuxtApp();
+      db = $firestore as Firestore;
+    }
+    return db;
+  }
+
+  function ensureSubscription() {
+    if (unsubscribe) return;
+    unsubscribe = onSnapshot(collection(getDb(), "sessions"), (snapshot) => {
+      sessions.value = snapshot.docs.map((d) => d.data() as SecretSantaSession);
+    });
+  }
+
+  if (import.meta.client) {
+    ensureSubscription();
+  }
+
   function findSession(id: string): SecretSantaSession | undefined {
     return sessions.value.find((s) => s.id === id);
   }
 
-  function createSession(name: string, guestNames: string[]): string {
+  async function createSession(
+    name: string,
+    guestNames: string[],
+  ): Promise<string> {
     const guests: Guest[] = guestNames
       .map((n) => n.trim())
       .filter(Boolean)
@@ -26,24 +62,22 @@ export const useSessionsStore = defineStore("sessions", () => {
       draws: {},
     };
 
-    sessions.value.push(session);
+    await setDoc(doc(getDb(), "sessions", session.id), session);
     return session.id;
   }
 
-  function deleteSession(id: string) {
-    sessions.value = sessions.value.filter((s) => s.id !== id);
+  async function deleteSession(id: string) {
+    await deleteDoc(doc(getDb(), "sessions", id));
     delete activeGuestBySession.value[id];
   }
 
-  function updateSession(
+  async function updateSession(
     id: string,
     name: string,
     guestEntries: { id?: string; name: string }[],
   ) {
     const session = findSession(id);
     if (!session) return;
-
-    session.name = name.trim();
 
     const existingById = new Map(session.guests.map((g) => [g.id, g]));
     const nextGuests: Guest[] = [];
@@ -53,17 +87,19 @@ export const useSessionsStore = defineStore("sessions", () => {
       if (!trimmed) continue;
 
       const existing = entry.id ? existingById.get(entry.id) : undefined;
-      if (existing) {
-        existing.name = trimmed;
-        nextGuests.push(existing);
-      } else {
-        nextGuests.push({ id: createId(), name: trimmed, wishlist: [] });
-      }
+      nextGuests.push(
+        existing
+          ? { ...existing, name: trimmed }
+          : { id: createId(), name: trimmed, wishlist: [] },
+      );
     }
 
-    session.guests = nextGuests;
     // Editing the guest list invalidates any in-progress draw.
-    session.draws = {};
+    await updateDoc(doc(getDb(), "sessions", id), {
+      name: name.trim(),
+      guests: nextGuests,
+      draws: {},
+    });
 
     const activeId = activeGuestBySession.value[id];
     if (activeId && !nextGuests.some((g) => g.id === activeId)) {
@@ -79,58 +115,97 @@ export const useSessionsStore = defineStore("sessions", () => {
     }
   }
 
-  function drawRecipient(
+  async function drawRecipient(
     sessionId: string,
     guestId: string,
-  ): { ok: true; recipientId: string } | { ok: false; message: string } {
-    const session = findSession(sessionId);
-    if (!session) return { ok: false, message: "Session not found." };
+  ): Promise<
+    { ok: true; recipientId: string } | { ok: false; message: string }
+  > {
+    const ref = doc(getDb(), "sessions", sessionId);
 
-    if (session.draws[guestId]) {
-      return { ok: true, recipientId: session.draws[guestId] };
-    }
+    try {
+      // Runs as a transaction so two guests drawing at once can't get the same recipient.
+      const recipientId = await runTransaction(getDb(), async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error("Session not found.");
+        const session = snap.data() as SecretSantaSession;
 
-    const taken = new Set(Object.values(session.draws));
-    const candidates = session.guests.filter(
-      (g) => g.id !== guestId && !taken.has(g.id),
-    );
+        if (session.draws[guestId]) {
+          return session.draws[guestId];
+        }
 
-    if (candidates.length === 0) {
+        const taken = new Set(Object.values(session.draws));
+        const candidates = session.guests.filter(
+          (g) => g.id !== guestId && !taken.has(g.id),
+        );
+
+        if (candidates.length === 0) {
+          throw new Error(
+            "No more guests left to draw. Ask the organizer to reset the session.",
+          );
+        }
+
+        const picked =
+          candidates[Math.floor(Math.random() * candidates.length)];
+        tx.update(ref, { [`draws.${guestId}`]: picked.id });
+        return picked.id;
+      });
+
+      return { ok: true, recipientId };
+    } catch (err) {
       return {
         ok: false,
         message:
-          "No more guests left to draw. Ask the organizer to reset the session.",
+          err instanceof Error ? err.message : "Could not draw a recipient.",
       };
     }
-
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
-    session.draws[guestId] = picked.id;
-    return { ok: true, recipientId: picked.id };
   }
 
-  function addWishlistItem(
+  async function addWishlistItem(
     sessionId: string,
     guestId: string,
     title: string,
     link: string,
   ) {
-    const guest = findSession(sessionId)?.guests.find((g) => g.id === guestId);
-    if (!guest) return;
-    guest.wishlist.push({
-      id: createId(),
-      title: title.trim(),
-      link: link.trim(),
+    const session = findSession(sessionId);
+    const guest = session?.guests.find((g) => g.id === guestId);
+    if (!session || !guest) return;
+
+    const nextGuests = session.guests.map((g) =>
+      g.id === guestId
+        ? {
+            ...g,
+            wishlist: [
+              ...g.wishlist,
+              { id: createId(), title: title.trim(), link: link.trim() },
+            ],
+          }
+        : g,
+    );
+
+    await updateDoc(doc(getDb(), "sessions", sessionId), {
+      guests: nextGuests,
     });
   }
 
-  function removeWishlistItem(
+  async function removeWishlistItem(
     sessionId: string,
     guestId: string,
     itemId: string,
   ) {
-    const guest = findSession(sessionId)?.guests.find((g) => g.id === guestId);
-    if (!guest) return;
-    guest.wishlist = guest.wishlist.filter((i) => i.id !== itemId);
+    const session = findSession(sessionId);
+    const guest = session?.guests.find((g) => g.id === guestId);
+    if (!session || !guest) return;
+
+    const nextGuests = session.guests.map((g) =>
+      g.id === guestId
+        ? { ...g, wishlist: g.wishlist.filter((i) => i.id !== itemId) }
+        : g,
+    );
+
+    await updateDoc(doc(getDb(), "sessions", sessionId), {
+      guests: nextGuests,
+    });
   }
 
   return {

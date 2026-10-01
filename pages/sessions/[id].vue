@@ -32,9 +32,9 @@ function switchGuest() {
   drawError.value = ''
 }
 
-function draw() {
+async function draw() {
   if (!activeGuestId.value) return
-  const result = store.drawRecipient(sessionId.value, activeGuestId.value)
+  const result = await store.drawRecipient(sessionId.value, activeGuestId.value)
   drawError.value = result.ok ? '' : result.message
 }
 

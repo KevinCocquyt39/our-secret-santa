@@ -24,7 +24,7 @@ function removeRow(index: number) {
   guestRows.value.splice(index, 1)
 }
 
-function save() {
+async function save() {
   const trimmedName = name.value.trim()
   const validGuests = guestRows.value.filter((r) => r.name.trim())
 
@@ -37,7 +37,7 @@ function save() {
     return
   }
 
-  store.updateSession(props.session.id, trimmedName, guestRows.value)
+  await store.updateSession(props.session.id, trimmedName, guestRows.value)
   emit('close')
 }
 </script>
